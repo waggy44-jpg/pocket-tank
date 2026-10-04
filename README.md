@@ -74,7 +74,7 @@ castle and coral. What you buy, you place yourself.
 index.html            the whole app (markup, styles, simulation, renderer)
 sw.js                 service worker — app shell only, never user data
 manifest.webmanifest  install metadata
-netlify.toml, _redirects   headers and SPA rewrites (Netlify; harmless on Pages)
+netlify.toml        response headers (Netlify; Cloudflare ignores it)
 icon-*.png            launcher icons
 tests/                the test suites — not deployed
 parts/                the source parts index.html is assembled from
