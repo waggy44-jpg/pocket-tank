@@ -1,0 +1,18 @@
+# Pocket Tank — Netlify config
+# Netlify serves *.webmanifest as application/octet-stream by default, and
+# browsers may then reject the PWA manifest. Pin the correct type.
+[[headers]]
+  for = "/*.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    # never pin a stale service worker, or updates never land
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"

@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Pocket Tank</title>
+<meta name="theme-color" content="#05121c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pocket Tank">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --abyss:#05121c; --deep:#0a2233; --mid:#124056; --line:#1d5f7a;
+  --foam:#dff3ff; --dim:#8fb6c9; --gold:#ffd479; --warn:#ff9d7a;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#000;color:var(--foam);
+  font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  overscroll-behavior:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.hud{position:absolute;inset:0;pointer-events:none}
+.hud>*{pointer-events:auto}
+.chip{position:absolute;background:rgba(5,18,28,.72);border:1px solid var(--line);
+  border-radius:999px;padding:5px 11px;font-size:12px;letter-spacing:.02em;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#coins{top:10px;right:10px;color:var(--gold)}
+#pop{top:10px;left:10px;display:none}
+#clock{top:10px;left:50%;transform:translateX(-50%);color:var(--dim);display:none}
+#banner{position:absolute;left:50%;top:34%;transform:translateX(-50%);
+  background:rgba(5,18,28,.92);border:1px solid var(--line);border-radius:14px;
+  padding:12px 16px;text-align:center;max-width:82vw;display:none}
+#banner b{display:block;font-size:15px;margin-bottom:3px}
+#banner span{color:var(--dim);font-size:12px}
+.panel{position:absolute;inset:0;background:rgba(3,10,16,.94);display:none;
+  flex-direction:column;padding:14px 14px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.panel.open{display:flex}
+.ph{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ph h2{margin:0;font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.ph .sp{flex:1}
+.btn{background:rgba(18,64,86,.55);border:1px solid var(--line);color:var(--foam);
+  border-radius:11px;padding:9px 13px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn:active{background:rgba(29,95,122,.7)}
+.btn.gold{color:var(--gold);border-color:#6b5320}
+.btn.on{background:var(--line);color:#04121c}
+.close{font-size:22px;line-height:1;padding:2px 10px}
+.card{background:rgba(10,34,51,.72);border:1px solid var(--line);border-radius:16px;padding:14px}
+.fishname{font-size:19px;font-weight:600;letter-spacing:.03em}
+.stageline{color:var(--dim);font-size:12px;margin-top:2px}
+.bar{height:7px;border-radius:4px;background:rgba(143,182,201,.16);overflow:hidden;margin-top:4px}
+.bar>i{display:block;height:100%;border-radius:4px}
+.rows{margin-top:12px;display:grid;gap:9px}
+.row{display:grid;grid-template-columns:76px 1fr 32px;align-items:center;gap:8px;font-size:12px}
+.row .lab{color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-size:10px}
+.row .val{text-align:right;color:var(--dim);font-size:11px}
+.goalnow{margin-top:12px;padding:9px 11px;border:1px dashed var(--line);border-radius:11px;
+  font-size:12px;color:var(--dim)}
+.goalnow b{color:var(--gold)}
+.tools{display:flex;gap:8px;margin-top:12px}
+.tools .btn{flex:1;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:10px}
+.item{background:rgba(10,34,51,.72);border:1px solid var(--line);border-radius:14px;padding:11px}
+.item.locked{opacity:.45}
+.item h3{margin:0 0 3px;font-size:13px}
+.item p{margin:0;font-size:11px;color:var(--dim);line-height:1.35}
+.price{margin-top:7px;font-size:12px;color:var(--gold)}
+.badges{display:grid;gap:8px;margin-top:8px}
+.badge{display:flex;align-items:center;gap:10px;background:rgba(10,34,51,.6);
+  border:1px solid var(--line);border-radius:12px;padding:9px 11px;font-size:12px}
+.badge .dot{width:26px;height:26px;border-radius:8px;flex:0 0 auto;
+  background:rgba(143,182,201,.14);display:grid;place-items:center;font-size:13px}
+.badge.off{color:#4d6d7e}
+.badge.off .dot{filter:grayscale(1) brightness(.55)}
+.badge.fresh{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,212,121,.3)}
+.note{color:var(--dim);font-size:11px;line-height:1.45;margin-top:10px}
+.state{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:#7fb9d0;
+  background:rgba(3,10,16,.6);border:1px solid var(--line);border-radius:10px;
+  padding:8px 9px;margin-top:10px;word-break:break-all;line-height:1.5}
+.setrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(29,95,122,.35);font-size:13px}
+.setrow .sp{flex:1}
+input[type=range]{width:120px;accent-color:var(--line)}
+.hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+  color:var(--dim);font-size:11px;text-align:center;background:rgba(5,18,28,.6);
+  padding:5px 12px;border-radius:999px;transition:opacity .6s}
+.wheel{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.wheel button{font-size:22px;padding:11px 0}
+.swatches{display:flex;gap:9px;margin-top:12px;justify-content:center}
+.sw{width:32px;height:32px;border-radius:50%;border:2px solid transparent}
+.sw.sel{border-color:#fff}
+.center{margin-top:20px;text-align:center}
+.namerow{display:flex;align-items:center;gap:10px;margin-top:10px}
+.namerow input{flex:1;min-width:0;background:rgba(3,10,16,.7);border:1px solid var(--line);
+  color:var(--foam);border-radius:10px;padding:9px 11px;font:inherit;font-size:14px}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div class="chip" id="pop"></div>
+    <div class="chip" id="coins"></div>
+    <div class="chip" id="clock"></div>
+    <div id="banner"><b></b><span></span></div>
+    <div class="hint" id="hint">tap the surface to feed &middot; hold to befriend &middot; swipe to clean</div>
+  </div>
+
+  <div class="panel" id="pCard">
+    <div class="ph"><h2>Fish card</h2><div class="sp"></div><button class="btn close" data-close>&times;</button></div>
+    <div class="card" id="cardBody"></div>
+    <div class="tools">
+      <button class="btn" id="tSponge">Sponge</button>
+      <button class="btn" id="tScissors">Scissors</button>
+      <button class="btn" id="tDone">Done</button>
+    </div>
+    <div class="center"><button class="btn" id="toMore">MORE &rsaquo;</button></div>
+    <div class="note" id="cardNote"></div>
+    <div class="state" id="stateLine"></div>
+  </div>
+
+  <div class="panel" id="pMore">
+    <div class="ph"><h2>Milestones</h2><div class="sp"></div><button class="btn close" data-close>&times;</button></div>
+    <div id="moreBody"></div>
+  </div>
+
+  <div class="panel" id="pShop">
+    <div class="ph"><h2>Shop</h2><div class="sp"></div><button class="btn close" data-close>&times;</button></div>
+    <div class="grid" id="shopBody"></div>
+    <div class="note">Care earns sand dollars. What you buy, you place yourself.</div>
+  </div>
+
+  <div class="panel" id="pSet">
+    <div class="ph"><h2>Settings</h2><div class="sp"></div><button class="btn close" data-close>&times;</button></div>
+    <div class="setrow"><span>Brightness</span><div class="sp"></div><input type="range" id="sBri" min="20" max="100" value="100"></div>
+    <div class="setrow"><span>Sound</span><div class="sp"></div><input type="range" id="sVol" min="0" max="100" value="55"></div>
+    <div class="setrow"><span>Lights out</span><div class="sp"></div><button class="btn" id="sLights">Double-tap</button></div>
+    <div class="center"><button class="btn gold" id="sReset">Start a new tank</button></div>
+  </div>
+
+  <div class="panel" id="pName">
+    <div class="ph"><h2>Meet your fry</h2></div>
+    <div class="card" id="nameBody"></div>
+    <div class="note">Two fry, as every tank starts. Name them, pick a colour, then place your bubbles on the glass.</div>
+    <div class="center"><button class="btn" id="nameGo">Put them in</button></div>
+  </div>
+</div>
+<script>
+"use strict";
+// ===== LOGIC START =====
+var GOALS = ["seek_food","follow_friend","inspect_reef","visit_bubbles","explore","rest","dart_play"];
+var STAGES = ["fry","juvenile","adult","elder"];
+var STAGE_AT = [0, 70, 200, 460];
+var TANK_MAX_FISH = 5;
+var COLORS = ["#ffb347","#7ad3ff","#ff8fa8","#a6e07a","#c9a6ff","#ffe9a3"];
+
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function rnd(a,b){ return a+Math.random()*(b-a); }
+function ri(n){ return Math.floor(Math.random()*n); }
+function dist(ax,ay,bx,by){ var dx=ax-bx,dy=ay-by; return Math.sqrt(dx*dx+dy*dy); }
+function clamp01(v){ return clamp(v,0,1); }
+
+function stageFor(age){
+  var s=0;
+  for (var i=0;i<STAGE_AT.length;i++) if (age>=STAGE_AT[i]) s=i;
+  return s;
+}
+function stageName(i){ return STAGES[clamp(i,0,3)]; }
+
+function makeFish(nm, col, x, y){
+  return {
+    id: Math.random().toString(36).slice(2,9),
+    name: nm, color: col, x:x, y:y, vx:0, vy:0, dir:1, tail:Math.random()*6.28,
+    hunger: rnd(4,7), energy: rnd(7,9), stress: 1, curiosity: rnd(5,9), bored: 0,
+    bold: ri(11), social: ri(11), lazy: ri(11),
+    trust: 3, age: 0, grown: false, school: false,
+    goal: "explore", urgency: 0, hesitate: 0, goalAge: 0, target: null,
+    friend: null, friendT: 0, spookAng: rnd(0,6.28), spookedT: 0, savedY: null,
+    seed: Math.random(), nextThink: 0, ate: 0,
+    badges: [], seen: {needs:false,traits:false,trust:false}, held:false
+  };
+}
+
+function temperament(f){
+  return { bold:f.bold, shy:10-f.bold, social:f.social, solo:10-f.social,
+           lazy:f.lazy, busy:10-f.lazy };
+}
+
+/* How much seagrass shelters a point: 0 open water, 1 tucked in the grass.
+   Only beds the fish is actually beside count, so open floor stays open. */
+function coverAt(tank,x,y){
+  var c = 0;
+  for (var i=0;i<tank.grass.length;i++){
+    var b = tank.grass[i];
+    if (Math.abs(x-b.x) > 26) continue;
+    var top = tank.floor - b.h;
+    if (y > top) c += clamp01((y-top)/(b.h+1)) * 0.8;
+  }
+  return clamp01(c);
+}
+
+function nearest(list,x,y){
+  var b=null,bd=1e9;
+  for (var i=0;i<list.length;i++){ var d=dist(x,y,list[i].x,list[i].y); if(d<bd){bd=d;b=list[i];} }
+  return b;
+}
+function reefOf(tank){
+  for (var i=0;i<tank.decor.length;i++) if (tank.decor[i].id==="castle") return tank.decor[i];
+  return null;
+}
+function bedAt(tank,x){
+  var b=null,bd=1e9;
+  for (var i=0;i<tank.grass.length;i++){ var d=Math.abs(tank.grass[i].x-x); if(d<bd){bd=d;b=tank.grass[i];} }
+  return b;
+}
+
+/* The state line — exactly the shape the 14.3M model is asked to complete. */
+function stateLine(f, tank){
+  var best=null,bd=1e9,i,g,d;
+  for (i=0;i<tank.fish.length;i++){
+    g = tank.fish[i];
+    if (g.id===f.id || g.school) continue;
+    d = dist(f.x,f.y,g.x,g.y);
+    if (d<bd){ bd=d; best=g; }
+  }
+  var reef = reefOf(tank);
+  var zone = f.y < tank.h*0.3 ? "surface" : (f.y > tank.floor-50 ? "floor" : "mid");
+  return "zone "+zone
+    +" hunger "+Math.round(f.hunger)
+    +" energy "+Math.round(f.energy)
+    +" stress "+Math.round(f.stress)
+    +" curiosity "+Math.round(f.curiosity)
+    +" bold "+f.bold
+    +" social "+f.social
+    +" stage "+stageName(stageFor(f.age))
+    +" trust "+Math.round(f.trust)
+    +" bored "+Math.round(f.bored)
+    +" food "+(tank.pellets.length ? (nearest(tank.pellets,f.x,f.y) && dist(f.x,f.y,nearest(tank.pellets,f.x,f.y).x,nearest(tank.pellets,f.x,f.y).y)<120 ? "near":"far") : "none")
+    +" friend "+(best ? (bd<45?"mid":(bd<120?"near":"far")) : "none")
+    +" bubble "+(tank.bubbles ? (dist(f.x,f.y,tank.bubbles.x,tank.bubbles.y)<70?"near":"far") : "none")
+    +" reef "+(reef ? (dist(f.x,f.y,reef.x,reef.y)<90?"near":"far") : "none")
+    +" cover "+(coverAt(tank,f.x,f.y)>0.4?"yes":"no")
+    +" light "+(tank.dark?"off":"on")
+    +" last "+f.goal;
+}
+
+/* The advisor. On the board a 14.3M transformer reads the line and completes it
+   with a goal and an urgency, sampled from its own distribution. This is the
+   same interface over a weighted model of drives and traits: no rule ever
+   overrides the pick, and a close call shows as hesitation. */
+function scoreGoals(f, tank){
+  var T = temperament(f);
+  var h=f.hunger/10, e=f.energy/10, st=f.stress/10, cu=f.curiosity/10, bo=f.bored/10;
+  var cover = coverAt(tank,f.x,f.y);
+  var buddies = 0;
+  for (var i=0;i<tank.fish.length;i++){
+    var g=tank.fish[i];
+    if (g.id!==f.id && !g.school && dist(f.x,f.y,g.x,g.y)<120) buddies++;
+  }
+  // Hunger is quartic and dominates: a starving fish must pick seek_food across
+  // every personality. Everything discretionary is gated by (1-h) and by energy,
+  // so a full belly and a tired fish both narrow the field honestly.
+  var fed = (1 - h*0.96), lively = e;
+  var s = {};
+  s.seek_food     = h*h*h*h*60 + T.lazy*0.05;
+  s.rest          = (1-e)*(1-e)*12 + T.lazy*0.10 + (tank.dark?2.2:0) + st*0.8;
+  s.follow_friend = (buddies*(0.42+T.social*0.12) + T.shy*0.05) * (0.4+lively*0.6) + h*0.4;
+  s.inspect_reef  = cu*(0.55+T.bold*0.07) * fed * (0.4+lively*0.6) + (reefOf(tank)?0.5:0)*fed;
+  s.visit_bubbles = (0.42+T.curiosity*0.03)*(1-h)*(0.4+lively*0.6)*(tank.bubbles?1:0.15) + T.busy*0.05;
+  // boredom is what keeps the tank moving: a bored, fed fish goes and looks at
+  // a part of the tank it has not seen for a while
+  s.dart_play     = (cu*0.6+bo*2.4+T.bold*0.13+T.busy*0.09)*(tank.dark?0.15:1)*fed*lively;
+  s.explore       = (bo*4.2+cu*0.7+T.bold*0.08)*fed*lively*(1-cover*0.35);
+  if (f.spookedT > 0){ s.dart_play = 0; s.explore *= 0.3; }
+  return s;
+}
+
+function decide(f, tank){
+  var s = scoreGoals(f,tank);
+  var keys = GOALS.filter(function(g){ return s[g] > 0.05; });
+  if (!keys.length) keys = ["rest"];
+  var sum=0,i;
+    for (i=0;i<keys.length;i++) sum += s[keys[i]];
+    // Temper the distribution, then RENORMALISE. Raising to 1/temp changes the
+    // total, and an un-normalised cdf silently dumps every sample past its end
+    // onto the last key — which then gets picked far more than it deserves.
+    var temp = 0.55 + f.stress*0.035 + f.bored*0.02;
+    var w = [], total = 0;
+    for (i=0;i<keys.length;i++){
+      var p = Math.pow(s[keys[i]]/sum, 1/temp);
+      w.push(p); total += p;
+    }
+    var r=Math.random(), acc=0, pick=keys[keys.length-1];
+    for (i=0;i<keys.length;i++){
+      acc += w[i]/total;
+      if (r <= acc){ pick = keys[i]; break; }
+    }
+  var sorted = keys.slice().sort(function(a,b){ return s[b]-s[a]; });
+  var top = s[sorted[0]], second = s[sorted[1]]||0;
+  var margin = top>0 ? (top-second)/top : 1;
+  // hesitation only on a genuine near-tie between the two front runners
+  f.hesitate = (keys.length>1 && margin > 0 && margin < 0.30) ? rnd(0.7,1.6) : 0;
+  f.urgency = clamp(Math.round(5 + f.hunger*0.4), 1, 9);
+  if (f.goal !== pick){ f.goal = pick; f.goalAge = 0; }
+  if (pick !== "follow_friend"){ f.friend = null; f.friendT = 0; }
+  return pick;
+}
+
+/* The reflex layer only performs the chosen goal. */
+function targetFor(f, tank, goal){
+  var reef = reefOf(tank), p, best, bd, i, g, d, gc;
+  switch(goal){
+    case "seek_food":
+      p = nearest(tank.pellets, f.x, f.y);
+      return p ? {x:p.x, y:p.y} : null;
+    case "follow_friend":
+      if (f.friend && f.friendT>0 && f.friend.x!=null) return {x:f.friend.x, y:f.friend.y};
+      best=null; bd=1e9;
+      for (i=0;i<tank.fish.length;i++){
+        g=tank.fish[i]; if (g.id===f.id||g.school) continue;
+        d=dist(f.x,f.y,g.x,g.y); if(d<bd){bd=d;best=g;}
+      }
+      if (!best) return null;
+      f.friend=best; f.friendT=6;
+      return {x:best.x, y:best.y};
+    case "inspect_reef":
+      return reef ? {x:reef.x+rnd(-30,30), y:tank.floor-28} : null;
+    case "visit_bubbles":
+      return tank.bubbles ? {x:tank.bubbles.x+rnd(-16,16), y:tank.bubbles.y+52} : null;
+    case "explore":
+      return {x:rnd(26,tank.w-26), y:rnd(tank.h*0.24,tank.floor-28)};
+    case "rest":
+      gc=null;
+      for (i=0;i<tank.grass.length;i++) if (!gc || tank.grass[i].h>gc.h) gc=tank.grass[i];
+      return gc ? {x:gc.x+rnd(-14,14), y:tank.floor-14} : {x:rnd(30,tank.w-30), y:tank.floor-18};
+    case "dart_play":
+      return {x:rnd(26,tank.w-26), y:rnd(tank.h*0.18,tank.floor-32)};
+  }
+  return null;
+}
+
+function stepDrives(f, tank, dt){
+  var rate = tank.dark ? 0.25 : 1;
+  f.hunger = clamp(f.hunger + dt*0.055*rate, 0, 10);
+  f.energy = clamp(f.energy - dt*0.030*rate + (f.goal==="rest" ? dt*0.30 : 0), 0, 10);
+  var moving = (f.goal==="dart_play" || f.goal==="explore");
+  f.bored  = clamp(f.bored + dt*(moving ? -1.6 : 0.16)*rate, 0, 10);
+  if (f.hunger < 3) f.bored = clamp(f.bored + dt*0.05, 0, 10);
+  f.curiosity = clamp(f.curiosity + dt*((f.goal==="rest"||f.goal==="seek_food") ? -0.02 : 0.03), 1, 10);
+  var calm = tank.dark ? 1.7 : 1;
+  var dStress = (tank.overgrown?0.075:0) + (f.hunger>8?0.02:0) + (tank.dark?0.012:0)
+              - coverAt(tank,f.x,f.y)*0.10 - 0.055*calm;
+  f.stress = clamp(f.stress + dt*dStress, 0, 10);
+  if (f.spookedT > 0) f.spookedT = Math.max(0, f.spookedT - dt);
+  f.goalAge += dt;
+  if (f.friendT > 0) f.friendT -= dt;
+  var care = (tank.overgrown ? -0.010 : 0.006) + (tank.algae>55 ? -0.006 : 0.002);
+  f.trust = clamp(f.trust + dt*care*(1 - clamp01(f.age/2400)), 0, 10);
+}
+
+function swim(f, tank, dt){
+  var sp = (44 + f.energy*4.2) * (f.goal==="dart_play" ? 1.75 : 1) * (tank.dark?0.55:1);
+  if (f.hesitate > 0){ sp *= 0.18; f.hesitate -= dt; }
+  if (f.spookedT > 0) sp *= 1.5;
+  var ax=0, ay=0, i, g, ddx, ddy, dd;
+  if (f.target){
+    ddx = f.target.x - f.x; ddy = f.target.y - f.y;
+    dd = Math.sqrt(ddx*ddx+ddy*ddy) || 1;
+    // Steering must actually reach the speed cap, or a fish spends a minute
+    // drifting toward a pellet it could cover in four seconds. Urgency scales
+    // how eagerly it commits.
+    var steer = 14 + f.urgency*3.2;
+    ax += ddx/dd*steer;
+    ay += ddy/dd*steer;
+  }
+  // Schooling: neighbours pull together, but a fish that has committed to a
+  // meal must not be shoved off it by a neighbour jostling for the same pellet.
+  // Separation only applies to fish that are NOT eating.
+  for (i=0;i<tank.fish.length;i++){
+    g = tank.fish[i]; if (g.id===f.id) continue;
+    ddx = f.x-g.x; ddy = f.y-g.y; dd = Math.sqrt(ddx*ddx+ddy*ddy)||1;
+    if (dd < 70 && f.goal !== "seek_food"){ ax += ddx/dd*(70-dd)/70*1.5; ay += ddy/dd*(70-dd)/70*1.5; }
+    else if (dd > 165 && f.goal==="follow_friend"){ ax -= ddx/dd*0.5; ay -= ddy/dd*0.5; }
+  }
+  // A fish holds a level: buoyancy cancels the goal's vertical pull when it is
+  // calm and unhurried. But a fish that has chosen to EAT must be able to go
+  // down to the food — pellets sink to the sand, and cancelling vertical
+  // movement here left a hungry fish drifting away from every meal it wanted.
+  if (f.goal !== "rest" && f.goal !== "seek_food") ay -= f.vy*0.9;
+  else if (f.goal === "seek_food") ay -= f.vy*0.12;
+  if (f.spookedT > 0){ ax += Math.cos(f.spookAng)*9; ay += Math.sin(f.spookAng)*9; }
+  f.vx += ax*dt*6; f.vy += ay*dt*6;
+  var drag = Math.pow(0.90, dt*60);
+  f.vx *= drag; f.vy *= drag;
+  var v = Math.sqrt(f.vx*f.vx+f.vy*f.vy), maxv = sp;
+  if (v > maxv){ f.vx = f.vx/v*maxv; f.vy = f.vy/v*maxv; }
+  f.x += f.vx*dt; f.y += f.vy*dt;
+  f.tail += dt*(2.2+v*0.11);
+  var m = 13 + stageFor(f.age)*4 + (f.grown?4:0);
+  f.x = clamp(f.x, m, tank.w-m);
+  f.y = clamp(f.y, 16, tank.floor-9);
+  if (Math.abs(f.vx) > 3) f.dir = f.vx > 0 ? 1 : -1;
+  return v;
+}
+
+function eatCheck(f, tank){
+  for (var i=0;i<tank.pellets.length;i++){
+    var p = tank.pellets[i];
+    if (dist(f.x,f.y,p.x,p.y) < 13 + stageFor(f.age)*3){
+      tank.pellets.splice(i,1);
+      f.hunger = clamp(f.hunger - rnd(3.4,5.2), 0, 10);
+      return true;
+    }
+  }
+  return false;
+}
+
+/* ---------- tank ---------- */
+function makeTank(w,h){
+  var t = {
+    w:w, h:h, floor:h-16,
+    fish:[], pellets:[], decor:[], bubbles:{x:w-34, y:70},
+    grass:[], dark:false, algae:0, overgrown:false,
+    coins:0, t:0, asleep:false, tool:null, toolUntil:0,
+    pop:0, frenzy:0, log:[]
+  };
+  for (var i=0;i<7;i++) t.grass.push(mkGrass(w, h, i));
+  t.overgrown = overgrown(t);
+  return t;
+}
+function mkGrass(w,h,i){
+  return { x: 26 + (w-52)*(i/6) + rnd(-6,6), h: rnd(34,62), sway: Math.random()*6.28, seed: Math.random() };
+}
+function newTank(w,h){
+  var t = makeTank(w,h);
+  var a = makeFish("Fry one", COLORS[0], w*0.38, h*0.5);
+  var b = makeFish("Fry two", COLORS[1], w*0.62, h*0.5);
+  t.fish.push(a,b);
+  return t;
+}
+
+/* ---------- growth, arrivals, trust, upkeep ---------- */
+function growth(f, tank, dt){
+  var rate = tank.dark || tank.asleep ? 0.25 : 1;
+  f.age += dt*rate;
+  var st = stageFor(f.age);
+  if (!f.grown && st >= 1){ f.grown = true; }
+  return st;
+}
+
+/* A birth needs: two grown adults, tank trust up, a bed tall enough to hide
+   in, and no fish already at the ceiling. */
+function arrivalGates(tank){
+  var adults = tank.fish.filter(function(f){ return stageFor(f.age) >= 2; });
+  var trust = 0;
+  tank.fish.forEach(function(f){ trust += f.trust; });
+  trust = tank.fish.length ? trust/tank.fish.length : 0;
+  var bed = 0;
+  tank.grass.forEach(function(g){ if (g.h > bed) bed = g.h; });
+  return {
+    grown: adults.length >= 2,
+    trust: trust >= 5.5,
+    bed: bed >= 48,
+    room: tank.fish.length < TANK_MAX_FISH
+  };
+}
+function canArrive(tank){
+  var g = arrivalGates(tank);
+  return g.grown && g.trust && g.bed && g.room;
+}
+/* The dance: two trusting adults circle low in the grass for a while, then a
+   fry appears between them. */
+function courtTick(tank, dt){
+  var adults = tank.fish.filter(function(f){ return stageFor(f.age) >= 2 && !f.school; });
+  if (adults.length < 2) { tank.court = null; return; }
+  if (!canArrive(tank)){ tank.court = null; return; }
+  if (!tank.court){
+    tank.court = { t:0, a:adults[0].id, b:adults[1].id, bed:bedAt(tank, adults[0].x) };
+    return;
+  }
+  var a = null, b = null, i;
+  for (i=0;i<adults.length;i++){
+    if (adults[i].id === tank.court.a) a = adults[i];
+    if (adults[i].id === tank.court.b) b = adults[i];
+  }
+  if (!a || !b){ tank.court = null; return; }
+  tank.court.t += dt;
+  var bed = tank.court.bed;
+  if (bed){
+    var ang = tank.court.t*1.15;
+    a.x = lerp(a.x, bed.x + Math.cos(ang)*30, 0.045);
+    a.y = lerp(a.y, tank.floor - 16, 0.045);
+    a.dir = Math.cos(ang) >= 0 ? 1 : -1;
+    b.x = lerp(b.x, bed.x + Math.cos(ang+0.5)*30, 0.045);
+    b.y = lerp(b.y, tank.floor - 14, 0.045);
+    b.dir = Math.cos(ang+0.5) >= 0 ? 1 : -1;
+    a.held = b.held = false;
+    if (tank.court.t > 26){
+      var baby = makeFish("Fry", COLORS[ri(COLORS.length)], bed.x, tank.floor-20);
+      baby.bold = clamp(Math.round((a.bold+b.bold)/2 + rnd(-1,1)),0,10);
+      baby.social = clamp(Math.round((a.social+b.social)/2 + rnd(-1,1)),0,10);
+      baby.trust = Math.max(a.trust,b.trust) - 1;
+      tank.fish.push(baby);
+      tank.court = null;
+      tank.pop = 2.2;
+      tank.news = { t: 0, b: "A fry arrived", s: "the tank changed someone" };
+      addBadge(tank, "tank", "birth", "The tank changed someone");
+    }
+  }
+}
+
+function earn(tank, n){ tank.coins += n; }
+function addBadge(tank, who, id, label){
+  if (who === "tank"){
+    if (!tank.badges) tank.badges = [];
+    if (tank.badges.some(function(b){ return b.id===id; })) return false;
+    tank.badges.push({id:id, label:label, fresh:true});
+    return true;
+  }
+  return false;
+}
+function badgeFish(f, id, label){
+  if (f.badges.some(function(b){ return b.id===id; })) return false;
+  f.badges.push({id:id, label:label, fresh:true});
+  return true;
+}
+function freshAny(fish, tank){
+  for (var i=0;i<fish.length;i++) if (fish[i].badges.some(function(b){ return b.fresh; })) return true;
+  return (tank.badges||[]).some(function(b){ return b.fresh; });
+}
+function cleared(fish, tank){
+  fish.forEach(function(f){ f.badges.forEach(function(b){ b.fresh=false; }); });
+  (tank.badges||[]).forEach(function(b){ b.fresh=false; });
+}
+
+/* Only a tank truly smothered by two beds at the ceiling is overgrown. */
+function overgrown(tank){
+  var tall = 0, i;
+  for (i=0;i<tank.grass.length;i++) if (tank.grass[i].h > tank.h*0.42) tall++;
+  return tall >= 2;
+}
+function stepTank(tank, dt){
+  tank.t += dt;
+  if (tank.tool && tank.t > tank.toolUntil){ tank.tool = null; tank.toolUntil = 0; }
+  if (tank.pop > 0) tank.pop -= dt;
+
+  // hunger economy: a meal lasts ~5 min awake. The tank holds off feeding
+    // itself while anyone is begging, so the first meal is yours.
+    var hungry = 0;
+    for (var i=0;i<tank.fish.length;i++){
+      if (!tank.fish[i].school && tank.fish[i].hunger > 8.6) hungry++;
+    }
+    tank.frenzy = clamp01(tank.frenzy + dt*(hungry>0 ? 0.12 : -0.10));
+    if (hungry > 0 && tank.frenzy > 0.55 && tank.pellets.length < 5 && tank.t - (tank.lastDrop||0) > 4){
+    var yy = rnd(18, 34);
+    tank.pellets.push({x:rnd(20,tank.w-20), y:yy, vy:0, vy2:0});
+    tank.lastDrop = tank.t;
+    earn(tank, 1);
+  }
+
+  // seagrass grows, algae films the glass
+  for (var j=0;j<tank.grass.length;j++){
+    var g = tank.grass[j];
+    g.sway += dt*0.7;
+    g.h = Math.min(tank.h*0.55, g.h + dt*0.16*(tank.dark?0.4:1));
+    // the urchin and the snail do their work at night
+    var grazer = owned(tank, "urchin");
+    var snail = owned(tank, "snail");
+    if (tank.dark) g.h = Math.max(16, g.h - dt*(snail?0.30:0)*(grazer?1.7:1));
+    else if (grazer && g.h > 40) g.h = Math.max(18, g.h - dt*0.08);
+  }
+  tank.algae = clamp(tank.algae + dt*(tank.dark?0.02:0.055), 0, 100);
+  tank.overgrown = overgrown(tank);
+
+  for (var f=0; f<tank.fish.length; f++){
+    var fs = tank.fish[f];
+    if (fs.school) continue;
+    growth(fs, tank, dt);
+    stepDrives(fs, tank, dt);
+    if (tank.t > fs.nextThink || fs.goalAge > 6){
+      fs.nextThink = tank.t + rnd(2.5,4.5);
+      decide(fs, tank);
+    }
+    fs.target = targetFor(fs, tank, fs.goal);
+    var v = swim(fs, tank, dt);
+    if (eatCheck(fs, tank)){
+      fs.ate++;
+      badgeFish(fs, "meal", "First meal from you");
+      earn(tank, 3);
+      addBadge(tank, "tank", "fed", "First feeding");
+    }
+    if (fs.goal === "rest" && v < 12) badgeFish(fs, "rest", "First rest");
+    if (fs.goal === "inspect_reef" && reefOf(tank) && fs.target &&
+        dist(fs.x,fs.y,fs.target.x,fs.target.y) < 40) badgeFish(fs,"reef","First reef");
+    if (fs.goal === "visit_bubbles" && tank.bubbles && fs.target &&
+        dist(fs.x,fs.y,fs.target.x,fs.target.y) < 44) badgeFish(fs,"bubbles","First bubbles");
+    if (fs.goal === "follow_friend" && fs.target &&
+        dist(fs.x,fs.y,fs.target.x,fs.target.y) < 40) badgeFish(fs,"follow","First follow");
+    if (fs.goal === "dart_play" && v > 70) badgeFish(fs,"dart","First dart");
+  }
+  courtTick(tank, dt);
+
+  // shrimp school: eats what falls and multiplies
+  for (var s=tank.fish.length-1; s>=0; s--){
+    var sh = tank.fish[s];
+    if (!sh.school) continue;
+    for (var p2=0;p2<tank.pellets.length;p2++){
+      if (sh.y < tank.floor-12 && dist(sh.x,sh.y,tank.pellets[p2].x,tank.pellets[p2].y) < 26){
+        tank.pellets.splice(p2,1); sh.energy -= 1; earn(tank, 1); break;
+      }
+    }
+    sh.x = clamp(sh.x + Math.sin(tank.t*1.7 + sh.seed*6)*10*dt, 10, tank.w-10);
+    sh.y = clamp(sh.y + (sh.energy>3 ? 26 : -20)*dt, tank.h*0.35, tank.floor-8);
+    if (sh.energy <= 0){ tank.fish.splice(s,1); }
+  }
+
+  // pellets sink
+  for (var q=0;q<tank.pellets.length;q++){
+    var pl = tank.pellets[q];
+    pl.vy = Math.min(pl.vy + 26*dt, 22);
+    pl.y += pl.vy*dt;
+    if (pl.y > tank.floor-8){ pl.y = tank.floor-8; pl.vy = 0; }
+  }
+  // sleep: the tank keeps running, at a quarter speed
+  tank.asleep = tank.dark;
+  return tank;
+}
+
+/* Gestures: a feed tap on the surface line, a hold to befriend, three hard
+   raps to scatter, a drag to clean, a two-tap for the light. */
+function feedAt(tank, x, y){
+  if (y > tank.h*0.34) return false;
+  var n = tank.dark ? 1 : 3;
+  for (var i=0;i<n;i++){
+    tank.pellets.push({x:clamp(x+rnd(-16,16),18,tank.w-18), y:rnd(16,30), vy:0, vy2:0});
+  }
+  tank.frenzy = 1;
+  earn(tank, 2);
+  return true;
+}
+function holdAt(tank, x, y){
+  var trusted = [];
+  for (var i=0;i<tank.fish.length;i++){
+    var f = tank.fish[i];
+    if (f.school) continue;
+    f.held = true;
+    if (f.trust >= 4.5) trusted.push(f);
+  }
+  trusted.sort(function(a,b){ return b.trust-a.trust; });
+  trusted.forEach(function(f){ badgeFish(f,"hold","First hold-approach"); });
+  addBadge(tank,"tank","hold","First hold-approach");
+  return trusted.length;
+}
+function rapAt(tank, x, y){
+  var n = 0;
+  for (var i=0;i<tank.fish.length;i++){
+    var f = tank.fish[i];
+    if (f.school) continue;
+    var d = dist(f.x,f.y,x,y);
+    if (d < 150){
+      f.spookedT = 4.5; f.spookAng = Math.atan2(f.y-y, f.x-x);
+      f.trust = clamp(f.trust - 0.9, 0, 10);
+      f.vx += Math.cos(f.spookAng)*130; f.vy += Math.sin(f.spookAng)*130;
+      n++;
+    }
+  }
+  return n;
+}
+/* A stroke. The sponge only wipes glass, the scissors only trim; a bare
+   finger does both. A stroke cuts exactly the fronds it crosses, at the
+   height of the finger. */
+function segHitsY(x0,y0, x1,y1, gx, top, bot){
+  // does the segment (x0,y0)-(x1,y1) pass through the vertical band
+  // at gx, between top and bot? (sampled, which is exact enough at this scale)
+  var steps = 24;
+  for (var i=0;i<=steps;i++){
+    var u = i/steps;
+    var x = lerp(x0,x1,u), y = lerp(y0,y1,u);
+    if (Math.abs(x-gx) < 13 && y >= top && y <= bot) return u;
+  }
+  return -1;
+}
+function stroke(tank, x0,y0, x1,y1, tool){
+  var cut = (tool !== "sponge"), wipe = (tool !== "scissors");
+  var fronds = 0, glass = 0;
+  for (var i=0;i<tank.grass.length;i++){
+    var g = tank.grass[i];
+    if (!cut) continue;
+    // a stroke cuts at the height of your finger, and the bed keeps what was
+    // below it: stroke low on the glass and the blade is cut to a nub, stroke
+    // near the tip and only the top is taken. `tip` is the blade's top (smaller
+    // y), `base` its foot in the sand, so tip < base.
+    var tip = tank.floor - 6 - g.h*0.9, base = tank.floor - 10;
+    var u = segHitsY(x0,y0, x1,y1, g.x, tip, base);
+    if (u < 0) continue;
+    // segHitsY returns the first sample inside the band, walking the blade
+    // from its tip downward, so u falls as the stroke gets lower.
+    var nh = Math.max(10, 6 + (1-u)*(g.h - 6));
+    if (nh < g.h - 1){ g.h = nh; fronds++; }
+  }
+  if (wipe){
+    var amount = clamp01(1 - Math.abs((x0+x1)/2/tank.w - 0.5)*0.4);
+    tank.algae = clamp(tank.algae - 9*amount, 0, 100);
+    glass = 1;
+  }
+  if (fronds) { earn(tank,1); addBadge(tank,"tank","trim","First trimming"); }
+  if (glass) { earn(tank,1); addBadge(tank,"tank","glass","First glass cleaning"); }
+  return { fronds:fronds, glass:glass };
+}
+
+function sleepTank(tank){
+  tank.dark = !tank.dark;
+  if (tank.dark){
+    for (var i=0;i<tank.fish.length;i++) tank.fish[i].savedY = tank.fish[i].y;
+    tank.asleepFrom = tank.t;
+    addBadge(tank,"tank","night","First full night's sleep");
+  } else {
+    for (var j=0;j<tank.fish.length;j++) if (tank.fish[j].savedY!=null) tank.fish[j].y = tank.fish[j].savedY;
+    // woken after a real stretch of sleep: the school is ravenous, and waits
+    // just under the surface where you usually feed them
+    if (tank.t - (tank.asleepFrom||0) > 60){
+      tank.frenzy = 1;
+      for (var k=0;k<tank.fish.length;k++){
+        var f = tank.fish[k];
+        if (f.school) continue;
+        f.hunger = clamp(f.hunger + 2.5, 0, 10);
+        f.y = rnd(20,40);
+        f.energy = clamp(f.energy + 1.5, 0, 10);
+      }
+    }
+    tank.asleepFrom = 0;
+  }
+  return tank.dark;
+}
+
+/* ---------- shop ---------- */
+var SHOP = [
+  { id:"sword", kind:"plant", name:"Sword plant", price:60, blurb:"A tall blade of grass. A fry needs cover to hide in." },
+  { id:"snail", kind:"critter", name:"Algae snail", price:80, blurb:"Grazes the glass and trims the grass while the tank sleeps." },
+  { id:"urchin", kind:"critter", name:"Sea urchin", price:120, blurb:"Keeps the grass down in daylight, so two beds never smother the tank." },
+  { id:"castle", kind:"decor", name:"Castle", price:180, blurb:"A swim-through. Fish come to inspect it." },
+  { id:"coral", kind:"decor", name:"Coral", price:150, blurb:"Slow colour on the back wall. Purely for looking at." }
+];
+function owned(tank,id){ return tank.decor.some(function(d){ return d.id===id; }); }
+function buy(tank,id){
+  var it = SHOP.filter(function(s){ return s.id===id; })[0];
+  if (!it || owned(tank,id) || tank.coins < it.price) return false;
+  tank.coins -= it.price;
+  tank.decor.push({ id:it.id, kind:it.kind === "critter" ? it.id : "decor",
+                    name:it.name, x:tank.w/2, y:tank.floor-14, seed:Math.random()*6.28 });
+  if (it.id === "sword"){
+    var g = mkGrass(tank.w, tank.h, ri(7));
+    g.h = 74; g.x = clamp(tank.w/2 + rnd(-60,60), 24, tank.w-24);
+    tank.grass.push(g);
+  }
+  return true;
+}
+function placeDecor(tank,id,x,y){
+  for (var i=0;i<tank.decor.length;i++){
+    if (tank.decor[i].id===id){
+      tank.decor[i].x = clamp(x, 20, tank.w-20);
+      tank.decor[i].y = clamp(y, tank.h*0.45, tank.floor-10);
+      return true;
+    }
+  }
+  return false;
+}
+
+/* ---------- save ---------- */
+var KEY = "pockettank.v1";
+function save(tank){
+  try {
+    var d = {
+      w:tank.w, h:tank.h, t:tank.t, coins:tank.coins, algae:tank.algae,
+      dark:tank.dark, grass:tank.grass, decor:tank.decor, bubbles:tank.bubbles,
+      badges:tank.badges||[], pellets:tank.pellets,
+      fish:tank.fish.map(function(f){
+        return { id:f.id, name:f.name, color:f.color, x:f.x, y:f.y, vx:f.vx, vy:f.vy,
+          hunger:f.hunger, energy:f.energy, stress:f.stress, curiosity:f.curiosity, bored:f.bored,
+          bold:f.bold, social:f.social, lazy:f.lazy, trust:f.trust, age:f.age, grown:f.grown,
+          school:f.school, badges:f.badges, seen:f.seen, tail:f.tail, dir:f.dir, seed:f.seed };
+      })
+    };
+    localStorage.setItem(KEY, JSON.stringify(d));
+    return true;
+  } catch(e){ return false; }
+}
+function load(){
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    var d = JSON.parse(raw);
+    if (!d || !d.fish || !d.fish.length) return null;
+    var t = makeTank(d.w || 360, d.h || 640);
+    t.t = d.t || 0; t.coins = d.coins || 0; t.algae = d.algae || 0; t.dark = !!d.dark;
+    t.grass = d.grass || t.grass; t.decor = d.decor || [];
+    t.bubbles = d.bubbles || t.bubbles;
+    t.badges = d.badges || []; t.pellets = d.pellets || [];
+    t.fish = d.fish.map(function(o){
+      var f = makeFish(o.name, o.color, o.x, o.y);
+      f.id = o.id || f.id; f.vx = o.vx || 0; f.vy = o.vy || 0;
+      f.hunger = o.hunger; f.energy = o.energy; f.stress = o.stress;
+      f.curiosity = o.curiosity; f.bored = o.bored || 0;
+      f.bold = o.bold; f.social = o.social; f.lazy = o.lazy; f.trust = o.trust;
+      f.age = o.age; f.grown = !!o.grown; f.school = !!o.school;
+      f.badges = o.badges || []; f.seen = o.seen || f.seen; f.tail = o.tail || 0;
+      f.dir = o.dir || 1; f.seed = o.seed == null ? Math.random() : o.seed;
+      return f;
+    });
+    return t;
+  } catch(e){ return null; }
+}
+// ===== LOGIC END =====
+
+// ===== VIEW START =====
+var cv = document.getElementById("c");
+var ctx = cv.getContext("2d");
+var W = 360, H = 640;
+var tank = null;
+var vol = 0.55, bri = 1.0;
+var placing = null;   // id of a decoration being placed
+var openPanel = null;
+var selFish = null;
+var firstRun = true;
+var lastTap = 0, rapCount = 0, rapWin = 0;
+var holdTimer = null, strokePrev = null, moved = 0;
+var banners = [];
+
+function fit(){
+  var r = cv.getBoundingClientRect();
+  var dpr = Math.min(window.devicePixelRatio||1, 2);
+  W = Math.max(240, Math.round(r.width));
+  H = Math.max(320, Math.round(r.height));
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  tank.w = W; tank.h = H; tank.floor = H-16;
+}
+function say(b, s, ms){
+  var el = document.getElementById("banner");
+  el.querySelector("b").textContent = b;
+  el.querySelector("span").textContent = s || "";
+  el.style.display = "block";
+  clearTimeout(say._t);
+  say._t = setTimeout(function(){ el.style.display = "none"; }, ms || 2600);
+}
+function chime(kind){
+  if (vol <= 0) return;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try {
+    if (!chime.ac) chime.ac = new AC();
+    var ac = chime.ac;
+    if (ac.state === "suspended") ac.resume();
+    var o = ac.createOscillator(), g = ac.createGain();
+    var now = ac.currentTime;
+    var f = { feed:520, eat:760, card:420, birth:880, light:300, trim:640, chip:900 }[kind] || 500;
+    o.type = kind==="birth" ? "triangle" : "sine";
+    o.frequency.setValueAtTime(f, now);
+    o.frequency.exponentialRampToValueAtTime(f*1.5, now+0.10);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.09*vol, now+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+0.28);
+    o.connect(g); g.connect(ac.destination);
+    o.start(now); o.stop(now+0.3);
+  } catch(e){}
+}
+
+/* ---------- drawing ---------- */
+function drawTank(t){
+  var dim = tank.dark ? 0.42 : 1.0;
+  var gr = ctx.createLinearGradient(0,0,0,H);
+  gr.addColorStop(0, darken("#0d3550", dim));
+  gr.addColorStop(0.55, darken("#0a2233", dim));
+  gr.addColorStop(1, darken("#061522", dim));
+  ctx.fillStyle = gr; ctx.fillRect(0,0,W,H);
+
+  // back glow
+  var rg = ctx.createRadialGradient(W*0.5, H*0.18, 10, W*0.5, H*0.18, H*0.6);
+  rg.addColorStop(0, "rgba(90,190,235,"+(tank.dark?0.03:0.13)+")");
+  rg.addColorStop(1, "rgba(90,190,235,0)");
+  ctx.fillStyle = rg; ctx.fillRect(0,0,W,H);
+
+  drawSand(t, dim);
+  if (t.bubbles) drawBubbles(t, dim);
+  drawGrass(t, dim);
+  drawDecor(t, dim);
+  if (t.decor.some(function(d){ return d.id==="coral"; })) drawCoral(t, dim);
+  drawPellets(t);
+  for (var i=0;i<t.fish.length;i++) drawFish(t.fish[i], dim);
+  drawGlass(t);
+  drawPlaceHint(t);
+}
+function darken(hex, k){
+  var n = parseInt(hex.slice(1),16);
+  var r = Math.round(((n>>16)&255)*k), g = Math.round(((n>>8)&255)*k), b = Math.round((n&255)*k);
+  return "rgb("+r+","+g+","+b+")";
+}
+function drawSand(t, dim){
+  ctx.fillStyle = darken("#c9b489", dim*0.95);
+  ctx.beginPath(); ctx.moveTo(0,H);
+  var y = t.floor;
+  ctx.lineTo(0,y);
+  for (var x=0;x<=W;x+=12){
+    y = t.floor + Math.sin(x*0.021)*3 + Math.sin(x*0.007)*2;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,.14)";
+  for (var i=0;i<26;i++){
+    var px = (i*137.5)%W, py = t.floor+4+((i*29)%9);
+    ctx.fillRect(px, py, 2, 1.6);
+  }
+}
+function drawGrass(t, dim){
+  for (var i=0;i<t.grass.length;i++){
+    var g = t.grass[i];
+    var sway = Math.sin(g.sway)*7;
+    var hue = g.seed > 0.5 ? "#2f8f63" : "#26795a";
+    ctx.strokeStyle = darken(hue, dim);
+    ctx.lineWidth = 3.4; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(g.x, t.floor+3);
+    var seg = 7;
+    for (var s=1;s<=seg;s++){
+      var u = s/seg;
+      ctx.lineTo(g.x + sway*u*u, t.floor+3 - g.h*u);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = darken("#3fbb85", dim);
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+}
+function drawBubbles(t, dim){
+  if (dim < 0.5) return;
+  var bx = t.bubbles.x, by = t.bubbles.y;
+  ctx.strokeStyle = "rgba(140,210,240,.28)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(bx, t.floor); ctx.lineTo(bx, by); ctx.stroke();
+  for (var i=0;i<16;i++){
+    var ph = (t.t*0.55 + i*0.137) % 1;
+    var y = t.floor - ph*(t.floor-by);
+    var r = 1.4 + ((i*7)%5)*0.6;
+    ctx.globalAlpha = (1-ph)*0.75*(dim-0.4)/0.6;
+    ctx.fillStyle = "rgba(200,240,255,.9)";
+    ctx.beginPath(); ctx.arc(bx + Math.sin(ph*9+i)*4, y, r, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+function drawDecor(t, dim){
+  for (var i=0;i<t.decor.length;i++){
+    var d = t.decor[i];
+    var w = Math.sin(t.t*1.4 + d.seed)*3;
+    ctx.save(); ctx.translate(d.x, d.y);
+    if (d.id === "castle"){
+      ctx.fillStyle = darken("#8fa3b0", dim);
+      ctx.fillRect(-22, -30, 44, 30);
+      ctx.fillRect(-26, -38, 10, 38);
+      ctx.fillRect(16, -38, 10, 38);
+      ctx.fillStyle = darken("#41525d", dim);
+      ctx.fillRect(-8, -16, 16, 16);
+      ctx.beginPath(); ctx.arc(0,-30,14,Math.PI,0); ctx.fill();
+    } else if (d.id === "urchin"){
+      ctx.strokeStyle = darken("#6b4b8a", dim); ctx.lineWidth = 1.6;
+      for (var s=0;s<18;s++){
+        var a = s/18*6.2832 + t.t*0.15;
+        ctx.beginPath(); ctx.moveTo(0,0);
+        ctx.lineTo(Math.cos(a)*12, Math.sin(a)*8); ctx.stroke();
+      }
+      ctx.fillStyle = darken("#4a3168", dim);
+      ctx.beginPath(); ctx.ellipse(0,0,7,5,0,0,6.2832); ctx.fill();
+    } else if (d.id === "snail"){
+      ctx.fillStyle = darken("#c9b08a", dim);
+      ctx.beginPath(); ctx.ellipse(0,-3,10,6,0,0,6.2832); ctx.fill();
+      ctx.strokeStyle = darken("#a98f6a", dim); ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.arc(-2,-7,5,w*0.1,0,6.2832); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+function drawCoral(t, dim){
+  var d = t.decor.filter(function(x){ return x.id==="coral"; })[0];
+  if (!d) return;
+  ctx.save(); ctx.translate(d.x, d.y);
+  ctx.strokeStyle = darken("#ff9ec4", dim); ctx.lineWidth = 4; ctx.lineCap = "round";
+  for (var b=0;b<3;b++){
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(b*8-8, -22, b*9-14, -38 - Math.sin(t.t+b)*3);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawPellets(t){
+  for (var i=0;i<t.pellets.length;i++){
+    var p = t.pellets[i];
+    ctx.fillStyle = "#e8b25e";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 6.2832); ctx.fill();
+  }
+}
+function drawFish(f, dim){
+  var st = stageFor(f.age);
+  var len = (26 + st*8 + (f.grown?6:0)) * (f.school?0.42:1);
+  var hgt = len*0.44;
+  var shiver = f.spookedT > 0 ? Math.sin(f.tail*4)*1.6 : 0;
+
+  ctx.save();
+  ctx.translate(f.x, f.y + shiver);
+  ctx.scale(f.dir, 1);
+  ctx.globalAlpha = dim;
+
+  if (f.school){
+    ctx.fillStyle = "rgba(255,180,190,.75)";
+    for (var k=-1;k<=1;k++){
+      ctx.save(); ctx.translate(k*7, k*4);
+      ctx.beginPath(); ctx.ellipse(0,0,len*0.5,hgt*0.5,0,0,6.2832); ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = dim;
+    ctx.restore(); return;
+  }
+
+  // tail
+  var tw = Math.sin(f.tail)*0.5;
+  ctx.fillStyle = shade(f.color, -0.22);
+  ctx.beginPath();
+  ctx.moveTo(-len*0.42, 0);
+  ctx.lineTo(-len*0.72, -hgt*0.62 + tw*hgt*0.5);
+  ctx.lineTo(-len*0.66, hgt*0.62 + tw*hgt*0.5);
+  ctx.closePath(); ctx.fill();
+
+  // body
+  var bg = ctx.createLinearGradient(0,-hgt/2,0,hgt/2);
+  bg.addColorStop(0, shade(f.color, 0.30));
+  bg.addColorStop(1, shade(f.color, -0.24));
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.ellipse(0,0,len*0.5,hgt*0.5,0,0,6.2832); ctx.fill();
+
+  // markings arrive with the first growth spurt; elders get a crest
+  if (st >= 1){
+    ctx.fillStyle = shade(f.color, -0.42);
+    ctx.beginPath(); ctx.ellipse(-len*0.06, 0, len*0.2, hgt*0.24, 0,0,6.2832); ctx.fill();
+  }
+  if (st >= 2){
+    ctx.fillStyle = shade(f.color, 0.42);
+    ctx.beginPath();
+    ctx.moveTo(-len*0.1, -hgt*0.42);
+    ctx.lineTo(len*0.04, -hgt*0.86);
+    ctx.lineTo(len*0.16, -hgt*0.40);
+    ctx.closePath(); ctx.fill();
+  }
+  // eye
+  ctx.fillStyle = "#0a1620";
+  ctx.beginPath(); ctx.arc(len*0.32, -hgt*0.14, Math.max(1.7, hgt*0.11), 0, 6.2832); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.85)";
+  ctx.beginPath(); ctx.arc(len*0.34, -hgt*0.19, Math.max(0.7, hgt*0.045), 0, 6.2832); ctx.fill();
+
+  // hesitation shows: a fish that isn't sure quivers in place
+  if (f.hesitate > 0){
+    ctx.strokeStyle = "rgba(255,212,121,.55)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(0,0,len*0.62,0,6.2832); ctx.stroke();
+  }
+  ctx.restore();
+
+  if (selFish === f && openPanel === "pCard"){
+    ctx.strokeStyle = "rgba(255,212,121,.7)"; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(f.x, f.y, len*0.72, 0, 6.2832); ctx.stroke();
+  }
+}
+function shade(hex, k){
+  var n = parseInt(hex.slice(1),16);
+  var f = function(v){ return Math.max(0, Math.min(255, Math.round(k>0 ? v + (255-v)*k : v*(1+k)))); };
+  return "rgb("+f((n>>16)&255)+","+f((n>>8)&255)+","+f(n&255)+")";
+}
+function drawGlass(t){
+  if (t.algae <= 1) return;
+  ctx.save();
+  ctx.globalAlpha = clamp01(t.algae/100)*0.30;
+  ctx.fillStyle = "#3f7a44";
+  ctx.fillRect(0,0,W,H);
+  // heavier at the corners, like a real film
+  var lg = ctx.createLinearGradient(0,0,0,H);
+  lg.addColorStop(0, "rgba(90,160,100,.55)");
+  lg.addColorStop(0.5, "rgba(60,120,80,.15)");
+  lg.addColorStop(1, "rgba(70,140,90,.5)");
+  ctx.fillStyle = lg; ctx.fillRect(0,0,W,H);
+  ctx.restore();
+}
+function drawPlaceHint(t){
+  if (!placing) return;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,212,121,.8)"; ctx.lineWidth = 2;
+  ctx.setLineDash([6,5]);
+  ctx.beginPath(); ctx.arc(placing.x, placing.y, 26, 0, 6.2832); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+/* ---------- input ---------- */
+function pos(ev){
+  var r = cv.getBoundingClientRect();
+  var t = ev.changedTouches ? ev.changedTouches[0] : ev;
+  return { x: t.clientX - r.left, y: t.clientY - r.top };
+}
+function hitFish(x,y){
+  for (var i=tank.fish.length-1;i>=0;i--){
+    var f = tank.fish[i];
+    var st = stageFor(f.age);
+    var len = (26 + st*8 + (f.grown?6:0)) * (f.school?0.42:1);
+    if (dist(x,y,f.x,f.y) < len*0.62) return f;
+  }
+  return null;
+}
+function hitDecor(x,y){
+  for (var i=0;i<tank.decor.length;i++){
+    if (dist(x,y,tank.decor[i].x, tank.decor[i].y-14) < 34) return tank.decor[i];
+  }
+  return null;
+}
+
+cv.addEventListener("touchstart", function(ev){
+  if (openPanel) return;
+  ev.preventDefault();
+  var p = pos(ev);
+  moved = 0; strokePrev = p; rapCount = 0;
+  clearTimeout(holdTimer);
+  holdTimer = setTimeout(function(){
+    holdTimer = null;
+    if (moved > 26) return;
+    var n = holdAt(tank, p.x, p.y);
+    chime("chip");
+    say(n ? (n+" came over") : "they are not ready yet",
+        n ? "the ones that trust you" : "trust them over a few days", 2000);
+  }, 900);
+}, {passive:false});
+
+cv.addEventListener("touchmove", function(ev){
+  if (openPanel) return;
+  ev.preventDefault();
+  var p = pos(ev);
+  moved += dist(strokePrev.x, strokePrev.y, p.x, p.y);
+  if (moved > 26 && holdTimer){ clearTimeout(holdTimer); holdTimer = null; }
+  if (strokePrev){
+    if (tank.tool){
+      var r = stroke(tank, strokePrev.x, strokePrev.y, p.x, p.y, tank.tool);
+      if (r.fronds || r.glass) chime("trim");
+    } else if (moved > 26){
+      var r2 = stroke(tank, strokePrev.x, strokePrev.y, p.x, p.y, null);
+      if (r2.fronds) chime("trim");
+    }
+  }
+  strokePrev = p;
+}, {passive:false});
+
+cv.addEventListener("touchend", function(ev){
+  if (openPanel) return;
+  ev.preventDefault();
+  clearTimeout(holdTimer); holdTimer = null;
+  var p = pos(ev);
+  var wasTap = moved <= 26;
+  strokePrev = null;
+
+  if (placing){
+    if (placing.id === "bubbles"){
+      tank.bubbles = { x:clamp(p.x, 26, tank.w-26), y:clamp(p.y, 40, tank.h*0.5) };
+      placing = null;
+      save(tank);
+      chime("chip");
+      say("Bubbles placed", "tap the surface to feed them", 2600);
+      var hh = document.getElementById("hint");
+      hh.textContent = "tap the surface to feed · hold to befriend · swipe to clean";
+      hh.style.opacity = 1;
+      setTimeout(function(){ hh.style.opacity = 0; }, 7000);
+      return;
+    }
+    if (placeDecor(tank, placing.id, p.x, p.y)){ chime("chip"); say("Placed", placing.name, 1400); }
+    placing = null;
+    return;
+  }
+  if (tank.tool) return;                    // a tool in hand takes strokes only
+  if (!wasTap) return;
+
+  // two taps turn the light out: the tank goes dormant
+  var now = Date.now();
+  if (now - lastTap < 320){
+    lastTap = 0;
+    var dark = sleepTank(tank);
+    chime("light");
+    say(dark ? "LIGHTS OUT" : "Lights on",
+        dark ? "the tank still runs, at a quarter speed" : "good morning", 2200);
+    lastTap = 0;
+    return;
+  }
+  lastTap = now;
+
+  // three hard raps scatter the fish and cost you their trust
+  rapWin += 1;
+  if (rapWin >= 3){
+    rapWin = 0;
+    var n = rapAt(tank, p.x, p.y);
+    if (n) say("They scattered", "that cost you their trust", 1800);
+    return;
+  }
+  setTimeout(function(){ rapWin = 0; }, 900);
+
+  var f = hitFish(p.x,p.y);
+  if (f){ selFish = f; showCard(f); chime("card"); return; }
+  var d = hitDecor(p.x,p.y);
+  if (d && d.id === "castle"){ say("A castle", "fish come to inspect it", 1600); return; }
+
+  if (p.y < tank.h*0.34){                   // feed at the water line
+    feedAt(tank, p.x, p.y);
+    chime("feed");
+    say("Fed", tank.frenzy>0.9 ? "they were waiting for you" : "", 1400);
+    return;
+  }
+});
+
+// mouse: desktop parity with touch
+cv.addEventListener("mousedown", function(ev){
+  if (openPanel) return;
+  var p = { x: ev.clientX - cv.getBoundingClientRect().left, y: ev.clientY - cv.getBoundingClientRect().top };
+  moved = 0; strokePrev = p; clearTimeout(holdTimer);
+  holdTimer = setTimeout(function(){ holdTimer=null; holdAt(tank,p.x,p.y); }, 900);
+});
+cv.addEventListener("mousemove", function(ev){
+  if (openPanel) return;
+  var p = { x: ev.clientX - cv.getBoundingClientRect().left, y: ev.clientY - cv.getBoundingClientRect().top };
+  if (!strokePrev) return;
+  moved += dist(strokePrev.x,strokePrev.y,p.x,p.y);
+  if (moved > 26 && holdTimer){ clearTimeout(holdTimer); holdTimer=null; }
+  if (tank.tool || moved > 26) stroke(tank, strokePrev.x, strokePrev.y, p.x, p.y, tank.tool);
+  strokePrev = p;
+});
+cv.addEventListener("mouseup", function(ev){
+  clearTimeout(holdTimer); holdTimer = null;
+  if (openPanel || moved > 26){ strokePrev=null; return; }
+  var p = { x: ev.clientX - cv.getBoundingClientRect().left, y: ev.clientY - cv.getBoundingClientRect().top };
+  strokePrev = null;
+  var now = Date.now();
+  if (now-lastTap < 320){
+    lastTap=0; sleepTank(tank); chime("light");
+    say(tank.dark?"LIGHTS OUT":"Lights on", tank.dark?"the tank still runs":"good morning", 2000);
+    return;
+  }
+  lastTap = now;
+  var f = hitFish(p.x,p.y);
+  if (f){ selFish=f; showCard(f); chime("card"); return; }
+  if (p.y < tank.h*0.34){ feedAt(tank,p.x,p.y); chime("feed"); say("Fed","",1400); }
+});
+
+/* ---------- panels ---------- */
+function show(id){
+  var ps = document.querySelectorAll(".panel");
+  for (var i=0;i<ps.length;i++) ps[i].classList.remove("open");
+  if (id){ document.getElementById(id).classList.add("open"); openPanel = id; }
+  else openPanel = null;
+  document.getElementById("hint").style.opacity = openPanel ? "0" : "";
+}
+document.addEventListener("click", function(ev){
+  if (ev.target.hasAttribute && ev.target.hasAttribute("data-close")) show(null);
+});
+
+function bar(label, val, max, color){
+  return '<div class="row"><div class="lab">'+label+'</div><div class="bar"><i style="width:'+
+    (clamp01(val/max)*100).toFixed(0)+'%;background:'+color+'"></i></div><div class="val">'+Math.round(val)+'</div></div>';
+}
+var DRV = [["Hunger","hunger","#ffb347"],["Energy","energy","#7ad3ff"],
+           ["Stress","stress","#ff8fa8"],["Curiosity","curiosity","#c9a6ff"],
+           ["Bored","bored","#a6e07a"]];
+var TRA = [["Bold","bold"],["Social","social"],["Lazy","lazy"]];
+
+function showCard(f){
+  if (!f) return;
+  f.held = false;
+  var st = stageFor(f.age);
+  // needs, traits and trust are revealed only as the fish shows that side of itself
+  var needKeys = ["seek_food","rest","dart_play"].indexOf(f.goal) >= 0;
+  if (needKeys) f.seen.needs = true;
+  if (["follow_friend","dart_play","explore"].indexOf(f.goal) >= 0) f.seen.traits = true;
+  if (f.trust >= 4) f.seen.trust = true;
+
+  var rows = "";
+  for (var i=0;i<DRV.length;i++){
+    var d = DRV[i];
+    rows += f.seen.needs ? bar(d[0], f[d[1]], 10, d[2]) : '<div class="row"><div class="lab">'+d[0]+'</div><div class="bar"><i style="width:0%"></i></div><div class="val">—</div></div>';
+  }
+  var trustRow = f.seen.trust
+    ? bar("Trust", f.trust, 10, "#ffd479")
+    : '<div class="row"><div class="lab">Trust</div><div class="bar"><i style="width:0%"></i></div><div class="val">—</div></div>';
+  var tr = "";
+  for (var j=0;j<TRA.length;j++){
+    var t = TRA[j];
+    tr += f.seen.traits ? bar(t[0], f[t[1]], 10, "#7ad3ff") : '<div class="row"><div class="lab">'+t[0]+'</div><div class="bar"><i style="width:0%"></i></div><div class="val">—</div></div>';
+  }
+  var next = st < 3 ? "grows into "+stageName(st+1) : "settled down for good";
+  var gates = arrivalGates(tank);
+  var toward = "";
+  if (f.age > 120 && !gates.room) toward = " &middot; the tank is full at "+TANK_MAX_FISH;
+
+  document.getElementById("cardBody").innerHTML =
+    '<div class="fishname">'+f.name+'</div>'+
+    '<div class="stageline">'+stageName(st)+' &middot; day '+Math.floor(f.age/60)+
+      ' &middot; '+next+toward+'</div>'+
+    '<div class="rows">'+rows+trustRow+tr+'</div>'+
+    '<div class="goalnow">doing now: <b>'+f.goal.replace(/_/g," ")+'</b> &middot; urgency '+f.urgency+
+      (f.hesitate>0 ? ' &middot; <b>hesitating</b>' : '')+'</div>';
+
+  var sl = stateLine(f, tank).split(" -> ");
+  document.getElementById("stateLine").innerHTML = sl[0] + '<br>-> <i>'+
+    f.goal.replace(/_/g," ")+' urgency '+f.urgency+'</i>';
+  document.getElementById("cardNote").innerHTML =
+    "Tap MORE for milestones, shop and settings. The sponge only wipes glass; the scissors only trim.";
+  show("pCard");
+}
+document.getElementById("toMore").addEventListener("click", function(){ showMore(); });
+
+var TANK_BADGES = [["fed","First feeding"],["trim","First trimming"],["glass","First glass cleaning"],
+                   ["hold","First hold-approach"],["night","First full night's sleep"],
+                   ["birth","The tank changed someone"]];
+var FISH_BADGES = [["meal","First meal from you"],["hold","First hold-approach"],["reef","First reef"],
+                   ["bubbles","First bubbles"],["follow","First follow"],["dart","First dart"]];
+function row(list, have){
+  var out = '<div class="badges">';
+  for (var i=0;i<list.length;i++){
+    var on = have.some(function(b){ return b.id===list[i][0]; });
+    out += '<div class="badge'+(on?"":" off")+(on&&have.some(function(b){return b.id===list[i][0]&&b.fresh;})?" fresh":"")+'">'+
+      '<div class="dot">'+(on?"★":"☆")+'</div><div>'+list[i][1]+'</div></div>';
+  }
+  return out+'</div>';
+}
+function showMore(){
+  var real = tank.fish.filter(function(f){ return !f.school; });
+  var h = '<div class="card"><div class="fishname">'+tank.fish.length+' fish &middot; population</div>';
+  for (var i=0;i<real.length;i++){
+    var f = real[i], st = stageFor(f.age);
+    h += '<div class="stageline" style="margin-top:8px"><b style="color:#dff3ff">'+f.name+'</b> &middot; '+stageName(st)+
+      ' &middot; day '+Math.floor(f.age/60)+'</div>';
+    h += '<div class="bar"><i style="width:'+(clamp01(f.age/STAGE_AT[3])*100).toFixed(0)+'%;background:#7ad3ff"></i></div>';
+    h += row(FISH_BADGES, f.badges);
+  }
+  h += '<div class="stageline" style="margin-top:14px"><b style="color:#dff3ff">The tank</b></div>';
+  h += row(TANK_BADGES, tank.badges||[]);
+  var g = arrivalGates(tank);
+  var gates = [["two grown adults",g.grown],["trust up to "+r2(g.trust?5.5:0),g.trust],
+               ["a bed tall enough to hide in",g.bed],["room for another fry",g.room]];
+  h += '<div class="stageline" style="margin-top:14px">fry gates</div><div class="badges">';
+  for (var k=0;k<gates.length;k++)
+    h += '<div class="badge'+(gates[k][1]?"":" off")+'"><div class="dot">'+(gates[k][1]?"✓":"·")+'</div><div>'+gates[k][0]+'</div></div>';
+  h += '</div></div><div class="center"><button class="btn gold" id="mShop">SHOP</button> <button class="btn" id="mSet">SETTINGS</button></div>';
+  document.getElementById("moreBody").innerHTML = h;
+  document.getElementById("mShop").addEventListener("click", showShop);
+  document.getElementById("mSet").addEventListener("click", function(){ show("pSet"); });
+  cleared(real, tank);
+  show("pMore");
+}
+function showShop(){
+  var h = "";
+  for (var i=0;i<SHOP.length;i++){
+    var it = SHOP[i], has = owned(tank, it.id);
+    h += '<div class="item'+(has?" locked":"")+'"><h3>'+it.name+'</h3><p>'+it.blurb+'</p>'+
+      '<div class="price">'+(has ? "in the tank" : it.price+" ◈")+'</div>'+
+      (has ? "" : '<div class="center"><button class="btn'+(tank.coins>=it.price?" gold":"")+'" data-buy="'+it.id+'"'+
+        (tank.coins>=it.price?"":" disabled")+'>Buy</button></div>')+'</div>';
+  }
+  document.getElementById("shopBody").innerHTML = h;
+  show("pShop");
+  var bs = document.querySelectorAll("#shopBody [data-buy]");
+  for (var j=0;j<bs.length;j++){
+    bs[j].addEventListener("click", function(ev){
+      var id = ev.target.getAttribute("data-buy");
+      if (buy(tank, id)){
+        chime("chip");
+        var d = tank.decor.filter(function(x){ return x.id===id; })[0];
+        placing = { id:id, x:d.x, y:d.y };
+        say("Bought "+d.name, "tap the glass to place it", 2600);
+        showShop();
+      }
+    });
+  }
+}
+document.getElementById("tSponge").addEventListener("click", function(){
+  tank.tool = "sponge"; tank.toolUntil = tank.t + 120; show(null); popTool();
+});
+document.getElementById("tScissors").addEventListener("click", function(){
+  tank.tool = "scissors"; tank.toolUntil = tank.t + 120; show(null); popTool();
+});
+document.getElementById("tDone").addEventListener("click", function(){
+  tank.tool = null; tank.toolUntil = 0; show("pCard"); popTool();
+});
+function popTool(){
+  var p = document.getElementById("pop");
+  p.style.display = tank.tool ? "block" : "none";
+  p.textContent = tank.tool ? (tank.tool==="sponge" ? "SPONGE" : "SCISSORS") + " · DONE" : "";
+}
+document.getElementById("sReset").addEventListener("click", function(){
+  if (!confirm("Start a new tank? This one is gone.")) return;
+  tank = newTank(W,H);
+  save(tank); show(null); say("A new tank", "two fry, as every tank starts", 2400);
+});
+document.getElementById("sBri").addEventListener("input", function(){ bri = this.value/100; });
+document.getElementById("sVol").addEventListener("input", function(){ vol = this.value/100; });
+document.getElementById("sLights").addEventListener("click", function(){
+  var on = sleepTank(tank);
+  this.textContent = tank.dark ? "Lights on" : "Double-tap";
+  this.classList.toggle("on", tank.dark);
+});
+
+/* first run: name the fry, pick a colour, place the bubbles */
+var NAME = ["",""], PICK = [0,1];
+function showName(){
+  var h = "";
+  for (var i=0;i<2;i++){
+    h += '<div class="namerow"><span style="font-size:22px">'+["🟠","🔵"][i]+'</span>'+
+      '<input id="nm'+i+'" maxlength="10" placeholder="Fry '+(i+1)+'" value="'+NAME[i]+'"></div>';
+    h += '<div class="swatches" id="sw'+i+'">';
+    for (var c=0;c<COLORS.length;c++)
+      h += '<div class="sw'+(PICK[i]===c?" sel":"")+'" data-i="'+i+'" data-c="'+c+'" style="background:'+COLORS[c]+'"></div>';
+    h += '</div>';
+  }
+  h += '<div class="stageline" style="margin-top:14px">bubbles</div>';
+  h += '<div class="stageline" id="bubTxt">place them after they are in</div>';
+  document.getElementById("nameBody").innerHTML = h;
+  for (var i2=0;i2<2;i2++){
+    (function(k){
+      var el = document.getElementById("nm"+k);
+      el.addEventListener("input", function(){ NAME[k] = el.value; });
+    })(i2);
+  }
+  var sws = document.querySelectorAll(".sw");
+  for (var s=0;s<sws.length;s++){
+    sws[s].addEventListener("click", function(ev){
+      var d = ev.currentTarget;
+      PICK[+d.getAttribute("data-i")] = +d.getAttribute("data-c");
+      showName();
+    });
+  }
+  show("pName");
+}
+document.getElementById("nameGo").addEventListener("click", function(){
+  tank = newTank(W,H);
+  for (var i=0;i<2;i++){
+    tank.fish[i].name = (NAME[i]||"").trim() || ("Fry "+(i+1));
+    tank.fish[i].color = COLORS[PICK[i]%COLORS.length];
+  }
+  firstRun = false;
+  say("Welcome", "now tap the glass where the bubbles should rise", 3200);
+  save(tank);
+  show(null);
+  placing = { id:"bubbles", x:tank.bubbles.x, y:tank.bubbles.y };
+  var h = document.getElementById("hint");
+  h.textContent = "tap to place the bubbles";
+  h.style.opacity = 1;
+  setTimeout(function(){ h.style.opacity = 0; }, 7000);
+});
+
+/* ---------- save ---------- */
+// save/load live in the LOGIC block (they are pure data, testable without a DOM)
+
+/* ---------- loop ---------- */
+var last = 0, saveAcc = 0, chipAcc = 0;
+function frame(ts){
+  var dt = last ? Math.min((ts-last)/1000, 0.05) : 0.016;
+  last = ts;
+  if (!openPanel || openPanel === "pCard" || openPanel === "pMore") stepTank(tank, dt);
+  drawTank(tank);
+
+  // top chips
+  var c = document.getElementById("coins");
+  c.textContent = tank.coins + " ◈";
+  var cl = document.getElementById("clock");
+  if (tank.dark){ cl.style.display = "block"; cl.textContent = tank.dark ? "☾ dormant" : ""; }
+  else cl.style.display = "none";
+
+  if (tank.news){
+    say(tank.news.b, tank.news.s, 3000);
+    tank.news = null;
+  }
+  chipAcc += dt;
+  if (chipAcc > 5){
+    chipAcc = 0;
+    if (tank.frenzy > 0.8) document.getElementById("coins").style.color = "var(--warn)";
+  }
+  saveAcc += dt;
+  if (saveAcc > 6){ saveAcc = 0; save(tank); }
+  requestAnimationFrame(frame);
+}
+document.addEventListener("visibilitychange", function(){
+  if (document.hidden) save(tank);
+});
+if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0){
+  navigator.serviceWorker.register("sw.js").catch(function(){});
+}
+
+function boot(){
+  var saved = load();
+  tank = saved || newTank(W,H);
+  firstRun = !saved;
+  fit();
+  window.addEventListener("resize", fit);
+  if (firstRun) setTimeout(showName, 250);
+  requestAnimationFrame(frame);
+}
+// public surface for the test harness
+window.PT = {
+  makeTank:makeTank, newTank:newTank, makeFish:makeFish, stepTank:stepTank,
+  decide:decide, scoreGoals:scoreGoals, stateLine:stateLine, stageFor:stageFor,
+  feedAt:feedAt, holdAt:holdAt, rapAt:rapAt, stroke:stroke, sleepTank:sleepTank,
+  buy:buy, placeDecor:placeDecor, arrivalGates:arrivalGates, canArrive:canArrive,
+  courtTick:courtTick, growth:growth, coverAt:coverAt, targetFor:targetFor,
+  eatCheck:eatCheck, addBadge:addBadge, badgeFish:badgeFish, freshAny:freshAny,
+  cleared:cleared, owned:owned, shop:SHOP, goals:GOALS, stages:STAGES,
+  clamp:clamp, dist:dist, save:save, load:load, boot:boot,
+  get tank(){ return tank; }, set tank(v){ tank = v; }
+};
+boot();
+// ===== VIEW END =====
+</script>
+</body>
+</html>
